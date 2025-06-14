@@ -9,8 +9,12 @@ api_id = int(os.getenv("API_ID"))        # ✅ Environment variable name (a stri
 api_hash = os.getenv("API_HASH")
 bot_token = os.getenv("BOT_TOKEN")
 
-client = TelegramClient('bot_session', api_id, api_hash).start(bot_token=bot_token)
+client = TelegramClient('RailwayaSession', api_id, api_hash)
+await client.connect()
 
+if not await client.is_user_authorized():
+    print("❌ Session not authorized. You must generate session file locally.")
+    exit()
 
 # Global variables
 chat_list = []
