@@ -2,7 +2,7 @@ from telethon import TelegramClient, events
 import asyncio
 import os
 
-api_id = int(os.getenv(25925019)) # 🔁 Replace with your API ID
+api_id = int(os.getenv("25925019")) # 🔁 Replace with your API ID
 api_hash = os.getenv('c5a78f58dae7f922ecc995661b51d0a1')
 bot_token = os.getenv("7408045132:AAH41RUYYIFsFOxgOem6DOW8HeAxDe8V1fY")
 client = TelegramClient('bot_session', api_id, api_hash).start(bot_token=bot_token)
