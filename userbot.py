@@ -1,88 +1,87 @@
 from telethon import TelegramClient, events
-import asyncio
 import os
-from dotenv import load_dotenv
+import asyncio
 
-load_dotenv()  # Only needed if you're using a .env file
-
-api_id = int(os.getenv("API_ID"))        # ✅ Environment variable name (a string)
+# Fetch API credentials from environment variables
+api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
-bot_token = os.getenv("BOT_TOKEN")
 
-client = TelegramClient('RailwayaSession', api_id, api_hash)
-await client.connect()
+# Use the session file you uploaded to GitHub (should be in the same folder)
+client = TelegramClient("RailwayaSession", api_id, api_hash)
 
-if not await client.is_user_authorized():
-    print("❌ Session not authorized. You must generate session file locally.")
-    exit()
-
-# Global variables
+# Global state
 chat_list = []
 source_chat = None
 target_chat = None
 state = {'step': 'idle'}
 
-@client.on(events.NewMessage(pattern='/start'))
-async def start(event):
-    await event.respond("Hi there! 👋")
-    await list_chats(event)
+async def main():
+    await client.connect()
+    if not await client.is_user_authorized():
+        print("❌ Session not authorized. Please generate the session file locally.")
+        return
 
-async def list_chats(event):
-    global chat_list
-    chat_list = []
+    print("📲 Starting your interactive userbot...")
 
-    async for dialog in client.iter_dialogs(limit=15):
-        chat_list.append(dialog)
-    
-    message = "📋 Select the source chat by replying with a number:\n"
-    for i, dialog in enumerate(chat_list):
-        name = dialog.name or "Unnamed Chat"
-        message += f"{i + 1}. {name}\n"
+    @client.on(events.NewMessage(pattern='/start'))
+    async def start(event):
+        await event.respond("Hi there! 👋")
+        await list_chats(event)
 
-    state['step'] = 'choose_source'
-    await event.respond(message)
+    async def list_chats(event):
+        global chat_list
+        chat_list = []
 
-@client.on(events.NewMessage)
-async def handle_selection(event):
-    global source_chat, target_chat
+        async for dialog in client.iter_dialogs(limit=15):
+            chat_list.append(dialog)
 
-    # Ignore forwarded messages while selecting
-    if event.is_private and event.raw_text.isdigit():
-        index = int(event.raw_text.strip()) - 1
+        message = "📋 Select the source chat by replying with a number:\n"
+        for i, dialog in enumerate(chat_list):
+            name = dialog.name or "Unnamed Chat"
+            message += f"{i + 1}. {name}\n"
 
-        if index < 0 or index >= len(chat_list):
-            await event.respond("❌ Invalid number. Please select from the list.")
-            return
+        state['step'] = 'choose_source'
+        await event.respond(message)
 
-        if state['step'] == 'choose_source':
-            source_chat = chat_list[index].entity
-            state['source_name'] = chat_list[index].name or "Unnamed Chat"
-            state['step'] = 'choose_target'
+    @client.on(events.NewMessage)
+    async def handle_selection(event):
+        global source_chat, target_chat
 
-            # Ask for target chat
-            msg = "✅ Source selected: " + state['source_name'] + "\n\n"
-            msg += "📋 Now select the destination chat by replying with a number:\n"
-            for i, dialog in enumerate(chat_list):
-                name = dialog.name or "Unnamed Chat"
-                msg += f"{i + 1}. {name}\n"
-            await event.respond(msg)
+        if event.is_private and event.raw_text.isdigit():
+            index = int(event.raw_text.strip()) - 1
 
-        elif state['step'] == 'choose_target':
-            target_chat = chat_list[index].entity
-            target_name = chat_list[index].name or "Unnamed Chat"
-            state['step'] = 'forwarding'
+            if index < 0 or index >= len(chat_list):
+                await event.respond("❌ Invalid number. Please select from the list.")
+                return
 
-            await event.respond(
-                f"🔁 Now forwarding messages from {state['source_name']} ➡️ {target_name}"
-            )
+            if state['step'] == 'choose_source':
+                source_chat = chat_list[index].entity
+                state['source_name'] = chat_list[index].name or "Unnamed Chat"
+                state['step'] = 'choose_target'
 
-# Forwarding handler
-@client.on(events.NewMessage)
-async def forward(event):
-    if state.get('step') == 'forwarding' and source_chat and target_chat:
-        if event.chat_id == source_chat.id:
-            await client.forward_messages(target_chat, event.message)
+                msg = "✅ Source selected: " + state['source_name'] + "\n\n"
+                msg += "📋 Now select the destination chat by replying with a number:\n"
+                for i, dialog in enumerate(chat_list):
+                    name = dialog.name or "Unnamed Chat"
+                    msg += f"{i + 1}. {name}\n"
+                await event.respond(msg)
 
-print("📲 Starting your interactive userbot...")
-client.start()
-client.run_until_disconnected()
+            elif state['step'] == 'choose_target':
+                target_chat = chat_list[index].entity
+                target_name = chat_list[index].name or "Unnamed Chat"
+                state['step'] = 'forwarding'
+
+                await event.respond(
+                    f"🔁 Now forwarding messages from {state['source_name']} ➡️ {target_name}"
+                )
+
+    @client.on(events.NewMessage)
+    async def forward(event):
+        if state.get('step') == 'forwarding' and source_chat and target_chat:
+            if event.chat_id == source_chat.id:
+                await client.forward_messages(target_chat, event.message)
+
+    await client.run_until_disconnected()
+
+# Run the bot
+asyncio.run(main())
