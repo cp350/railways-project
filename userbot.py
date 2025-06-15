@@ -7,7 +7,7 @@ api_hash = 'c5a78f58dae7f922ecc995661b51d0a1'
 
 number = random.randint(1, 10000)
 
-client = TelegramClient(str(number), api_id, api_hash)
+client = TelegramClient("2717", api_id, api_hash)
 
 chat_list = []
 source_title = None
